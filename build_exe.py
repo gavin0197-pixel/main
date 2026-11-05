@@ -66,7 +66,8 @@ def main() -> None:
         cmd[-1:-1] = ["--version-file", str(vfile)]
     print(" ".join(cmd))
     subprocess.run(cmd, check=True, cwd=ROOT)
-    print(f"\n완료: dist/{name}{'.exe' if sys.platform == 'win32' else ''}")
+    # 콘솔 인코딩(cp1252 등)과 무관하게 출력되도록 ASCII 로만 출력
+    print(f"\nDone: dist/{name}{'.exe' if sys.platform == 'win32' else ''}")
 
 
 if __name__ == "__main__":
