@@ -1,0 +1,65 @@
+name: Build Windows EXE
+
+# 푸시할 때마다 Windows EXE를 빌드해 Actions 아티팩트로 올리고,
+# ppt_macro_gen/__init__.py 의 __version__ 이 아직 릴리스되지 않은 새 버전이면
+# GitHub Release (태그 v<버전>) 를 만들어 EXE를 첨부합니다.
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: python -m pip install --upgrade pip pyinstaller pytest
+
+      - name: Test
+        run: python -m pytest -q
+
+      - name: Version
+        id: ver
+        run: echo "version=$(python -c 'import ppt_macro_gen as p; print(p.__version__)')" >> "$GITHUB_OUTPUT"
+
+      - name: Build EXE
+        run: python build_exe.py
+
+      - name: Smoke test (EXE starts and stays up)
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem dist\*.exe | Select-Object -First 1
+          $p = Start-Process -FilePath $exe.FullName -PassThru
+          Start-Sleep -Seconds 10
+          if ($p.HasExited) { Write-Error "EXE exited early (code $($p.ExitCode))"; exit 1 }
+          Stop-Process -Id $p.Id -Force
+          Write-Host "OK: $($exe.Name) $([math]::Round($exe.Length/1MB,1)) MB"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PPT_Photo_Macro_Generator_v${{ steps.ver.outputs.version }}
+          path: dist/*.exe
+          if-no-files-found: error
+
+      - name: Release (new version only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v${{ steps.ver.outputs.version }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "$tag already released - skipping (bump __version__ to publish a new release)"
+          else
+            python scripts/release_notes.py "${{ steps.ver.outputs.version }}" > notes.md
+            gh release create "$tag" dist/*.exe --target "$GITHUB_SHA" --title "$tag" --notes-file notes.md
+          fi

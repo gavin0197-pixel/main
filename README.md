@@ -11,15 +11,27 @@ Python 3.10 이상 (Windows용 Python 설치 시 tkinter 포함, 추가 패키�
 python -m ppt_macro_gen
 ```
 
-exe 하나로 만들려면:
+### Windows EXE (파이썬 없이 실행)
+
+- **다운로드:** GitHub 저장소의 **Releases**에서 `PPT_Photo_Macro_Generator_v<버전>.exe`를 받아 바로 실행합니다.
+  (`__version__`을 올려 푸시하면 GitHub Actions가 Windows에서 빌드해 Release `v<버전>`을 자동으로 만듭니다.
+  버전을 안 올린 푸시도 Actions → 해당 실행 → Artifacts에서 EXE를 받을 수 있습니다.)
+- **직접 빌드 (Windows):**
 
 ```bash
 pip install pyinstaller
 ```
 
 ```bash
-pyinstaller --onefile --windowed --name PPT사진배치생성기 run.py
+python build_exe.py
 ```
+
+→ `dist/PPT_Photo_Macro_Generator_v<버전>.exe`
+
+## 버전
+
+현재 버전은 GUI 창 제목과 상단 오른쪽, EXE 파일명·속성, 생성된 VBA 코드 머리 주석에 표시됩니다.
+변경 내역은 `CHANGELOG.md`. 수정 시 `ppt_macro_gen/__init__.py`의 `__version__`만 올리면 모든 곳에 반영됩니다.
 
 ## 사용 순서
 

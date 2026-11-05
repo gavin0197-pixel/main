@@ -6,7 +6,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import colorchooser, filedialog, messagebox, ttk
 
-from . import __version__
+from . import APP_NAME, __version__
 from .model import (
     ASPECT_FIT,
     ASPECT_STRETCH,
@@ -92,7 +92,7 @@ class App(ttk.Frame):
 
     # ----------------------------------------------------------------- build
     def _build(self) -> None:
-        self.master.title(f"PPT 사진 배치 매크로 생성기 v{__version__}")
+        self.master.title(f"{APP_NAME}  v{__version__}")
         self.grid(sticky="nsew")
         self.master.columnconfigure(0, weight=1)
         self.master.rowconfigure(0, weight=1)
@@ -113,6 +113,7 @@ class App(ttk.Frame):
         ttk.Separator(bar, orient="vertical").pack(side="left", fill="y", padx=8)
         ttk.Button(bar, text="코드 복사", command=self._copy_code).pack(side="left")
         ttk.Button(bar, text=".bas 저장…", command=self._save_bas).pack(side="left", padx=4)
+        ttk.Label(bar, text=f"버전 v{__version__}", foreground="#555").pack(side="right", padx=(8, 2))
 
         # 왼쪽: 설정 탭
         nb = ttk.Notebook(self)

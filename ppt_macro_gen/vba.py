@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from . import APP_NAME, __version__
 from .model import (
     ASPECT_FIT,
     FILL_COL,
@@ -57,7 +58,7 @@ def generate(lay: Layout, module_header: bool = False) -> str:
     # ---- 머리 주석: 설정 요약 ----
     a("' " + "=" * 70)
     a(f"' {name}")
-    a("' PPT 사진 자동 배치 매크로 생성기로 만든 코드")
+    a(f"' {APP_NAME} v{__version__} 로 생성")
     a("' " + "-" * 70)
     a(f"' 사용법 : {_usage(lay, n)}")
     a(f"' 가져오기: {SOURCE_LABEL[lay.source]}")

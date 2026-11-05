@@ -10,6 +10,8 @@ import re
 from dataclasses import asdict, dataclass, field
 from typing import Iterable
 
+from . import __version__
+
 SCHEMA_VERSION = 1
 
 # 사진 크기 결정 방식
@@ -204,6 +206,7 @@ class Layout:
     def to_dict(self) -> dict:
         d = asdict(self)
         d["schema"] = SCHEMA_VERSION
+        d["generator_version"] = __version__
         return d
 
     @classmethod
