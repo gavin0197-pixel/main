@@ -68,7 +68,8 @@ def generate(lay: Layout, module_header: bool = False) -> str:
     if lay.excluded:
         a("' 제외 칸 : " + ", ".join(f"({r + 1}행 {c + 1}열)" for r, c in lay.excluded))
     if lay.size_mode == SIZE_FIXED:
-        a(f"' 사진   : 가로 {num(lay.pic_w)} × 세로 {num(lay.pic_h)} cm 고정, 칸 정중앙")
+        a(f"' 사진   : 가로 {num(lay.pic_w)} × 세로 {num(lay.pic_h)} cm 고정, 칸 정중앙"
+          + (f" (칸보다 크면 칸 - 여백 {num(lay.margin_x)}/{num(lay.margin_y)} cm로 축소)" if lay.shrink_to_cell else ""))
     else:
         a(f"' 사진   : 칸 크기 - 여백 (좌우 각 {num(lay.margin_x)} / 상하 각 {num(lay.margin_y)} cm)")
     a("' 비율   : " + ("원본 비율 유지 (박스 안에 맞춤, 중앙)" if fit else "박스에 강제로 맞춤 (원본 비율이 다르면 찌그러짐)"))
@@ -112,6 +113,7 @@ def generate(lay: Layout, module_header: bool = False) -> str:
         a(
             f"    slotX({s.index}) = {num(s.x)}: slotY({s.index}) = {num(s.y)}: "
             f"slotW({s.index}) = {num(s.w)}: slotH({s.index}) = {num(s.h)}   ' {s.row + 1}행 {s.col + 1}열"
+            + (" (칸에 맞춰 축소)" if s.shrunk else "")
         )
     a("")
 

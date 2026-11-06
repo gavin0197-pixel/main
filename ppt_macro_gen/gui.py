@@ -71,6 +71,7 @@ class App(ttk.Frame):
         self.v_pic_w = V()
         self.v_pic_h = V()
         self.v_aspect = V()
+        self.v_shrink = tk.BooleanVar()
         self.v_border = tk.BooleanVar()
         self.v_border_w = V()
         self.v_border_color = V()
@@ -84,7 +85,7 @@ class App(ttk.Frame):
         self.v_status = V()
         for var in (
             self.v_name, self.v_origin_x, self.v_origin_y, self.v_fill, self.v_size_mode,
-            self.v_margin_x, self.v_margin_y, self.v_pic_w, self.v_pic_h, self.v_aspect,
+            self.v_margin_x, self.v_margin_y, self.v_pic_w, self.v_pic_h, self.v_aspect, self.v_shrink,
             self.v_border, self.v_border_w, self.v_border_color, self.v_source, self.v_sort,
             self.v_sel_order, self.v_exact, self.v_exts, self.v_opt_explicit,
         ):
@@ -226,6 +227,8 @@ class App(ttk.Frame):
         self._entry(f, self.v_pic_w).grid(row=3, column=1, padx=4)
         ttk.Label(f, text="세로").grid(row=3, column=2, sticky="e")
         self._entry(f, self.v_pic_h).grid(row=3, column=3, padx=4)
+        ttk.Checkbutton(f, text="칸보다 크면 칸 − 여백으로 줄이기 (텍스트 칸 등 좁은 칸)",
+                        variable=self.v_shrink).grid(row=4, column=0, columnspan=4, sticky="w", padx=(18, 0), pady=(4, 0))
 
         f = self._section(tab, "원본 비율")
         ttk.Radiobutton(f, text="무시하고 박스에 맞춤 (기존 매크로 방식, 찌그러질 수 있음)",
@@ -340,6 +343,7 @@ class App(ttk.Frame):
         self.v_margin_y.set(num(lay.margin_y))
         self.v_pic_w.set(num(lay.pic_w))
         self.v_pic_h.set(num(lay.pic_h))
+        self.v_shrink.set(lay.shrink_to_cell)
         self.v_aspect.set(lay.aspect)
         self.v_border.set(lay.border)
         self.v_border_w.set(num(lay.border_weight))
@@ -371,6 +375,7 @@ class App(ttk.Frame):
         lay.margin_y = parse_cm(self.v_margin_y.get(), "상하 여백")
         lay.pic_w = parse_cm(self.v_pic_w.get(), "사진 가로")
         lay.pic_h = parse_cm(self.v_pic_h.get(), "사진 세로")
+        lay.shrink_to_cell = bool(self.v_shrink.get())
         lay.aspect = self.v_aspect.get()
         lay.border = bool(self.v_border.get())
         lay.border_weight = parse_cm(self.v_border_w.get(), "테두리 두께")
@@ -474,12 +479,16 @@ class App(ttk.Frame):
             for sl in lay.slots():
                 x0, y0 = px(sl.x), py(sl.y)
                 x1, y1 = px(sl.x + sl.w), py(sl.y + sl.h)
+                overflow = sl.w > sl.cell_w + 1e-9 or sl.h > sl.cell_h + 1e-9
+                # 파랑: 정상 / 주황: 칸에 맞춰 줄어듦 / 빨강: 칸 밖으로 튀어나옴
+                fill = "#ffcdd2" if overflow else ("#ffe0b2" if sl.shrunk else "#d6e4f5")
                 c.create_rectangle(x0, y0, x1, y1, outline="black" if lay.border else "#3b6fb6",
-                                   width=2 if lay.border else 1, fill="#d6e4f5")
+                                   width=2 if lay.border else 1, fill=fill)
                 c.create_text((x0 + x1) / 2, (y0 + y1) / 2 - 8, text=str(sl.index),
                               font=("", 14, "bold"), fill="#1f3f73")
-                c.create_text((x0 + x1) / 2, (y0 + y1) / 2 + 10,
-                              text=f"{num(sl.w)}×{num(sl.h)}", fill="#1f3f73", font=("", 8))
+                if x1 - x0 >= 50:  # 좁은 칸에서는 크기 글자 생략
+                    c.create_text((x0 + x1) / 2, (y0 + y1) / 2 + 10,
+                                  text=f"{num(sl.w)}×{num(sl.h)}", fill="#1f3f73", font=("", 8))
 
         # 열 너비 / 행 높이 표시
         for col in range(lay.cols):

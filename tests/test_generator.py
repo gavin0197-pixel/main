@@ -196,3 +196,52 @@ def test_slot_lines_in_code():
     code = generate(P["최신: 파일 선택 6장, 왼쪽 1.46cm 열 + 2×3"])
     assert "slotX(2) = 8.26: slotY(2) = 0.1: slotW(2) = 6.5: slotH(2) = 4.5" in code
     assert "Const SLOT_COUNT As Long = 6" in code
+
+
+# ---------------- 제외 칸 해제 시 사진이 칸 밖으로 튀어나오던 문제 ----------------
+
+def _latest_with_2cm_text_col():
+    lay = presets()["최신: 파일 선택 6장, 왼쪽 1.46cm 열 + 2×3"]
+    lay.col_widths[0] = 2.0
+    return lay
+
+
+def test_toggle_twice_restores_identical_slots():
+    lay = _latest_with_2cm_text_col()
+    before = xy(lay)
+    lay.toggle_cell(2, 0)
+    lay.toggle_cell(2, 0)
+    assert xy(lay) == before
+
+
+def test_reenabled_narrow_cell_shrinks_fixed_photo_inside_cell():
+    lay = _latest_with_2cm_text_col()
+    lay.toggle_cell(2, 0)  # 3행 1열(텍스트 칸)을 사진 칸으로
+    s = next(s for s in lay.slots() if (s.row, s.col) == (2, 0))
+    assert s.shrunk and (s.x, s.y, s.w, s.h) == (0.1, 9.5, 1.8, 4.5)
+    assert s.x >= s.cell_x and s.x + s.w <= s.cell_x + s.cell_w
+    # 다른 칸은 그대로 6.5×4.5
+    assert all((t.w, t.h) == (6.5, 4.5) for t in lay.slots() if t is not s and not t.shrunk)
+    assert any("줄였습니다" in w for w in lay.warnings())
+    assert "(칸에 맞춰 축소)" in generate(lay)
+
+
+def test_shrink_off_keeps_old_overflow_behavior_with_warning():
+    lay = _latest_with_2cm_text_col()
+    lay.shrink_to_cell = False
+    lay.toggle_cell(2, 0)
+    s = next(s for s in lay.slots() if (s.row, s.col) == (2, 0))
+    assert (s.x, s.w) == (-2.25, 6.5) and not s.shrunk
+    assert any("겹칩니다" in w for w in lay.warnings())
+
+
+def test_shrink_does_not_touch_photos_that_fit():
+    for name, lay in presets().items():
+        off = Layout.from_dict({**lay.to_dict(), "shrink_to_cell": False})
+        assert xy(lay) == xy(off), name
+
+
+def test_old_json_without_shrink_field_loads():
+    d = P["최신: 파일 선택 6장, 왼쪽 1.46cm 열 + 2×3"].to_dict()
+    d.pop("shrink_to_cell")
+    assert Layout.from_dict(d).shrink_to_cell is True
