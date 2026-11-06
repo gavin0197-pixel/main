@@ -254,6 +254,8 @@ def _resize_list(values: list[float], n: int, default: float) -> list[float]:
 
 
 # ---- 기본 제공 프리셋 (인계 문서 기준) ----
+# 사진 크기는 모두 '칸 크기 − 여백' 모드가 기본. 여백은 기존 고정 크기와 똑같은 결과가 나오도록 정했고,
+# pic_w/pic_h 에는 기존 고정 크기를 남겨 두어 '고정 크기'로 바꾸면 바로 같은 값이 쓰이게 했다.
 def presets() -> dict[str, Layout]:
     return {
         "최신: 파일 선택 6장, 왼쪽 1.46cm 열 + 2×3": Layout(
@@ -261,7 +263,9 @@ def presets() -> dict[str, Layout]:
             col_widths=[1.46, 6.7, 6.7],
             row_heights=[4.7, 4.7, 4.7],
             excluded=[[0, 0], [1, 0], [2, 0]],
-            size_mode=SIZE_FIXED,
+            size_mode=SIZE_MARGIN,
+            margin_x=0.1,
+            margin_y=0.1,
             pic_w=6.5,
             pic_h=4.5,
             aspect=ASPECT_FILL,
@@ -273,7 +277,9 @@ def presets() -> dict[str, Layout]:
             row_heights=[4.5, 4.5, 4.5],
             origin_x=0.0,
             origin_y=0.74,
-            size_mode=SIZE_FIXED,
+            size_mode=SIZE_MARGIN,
+            margin_x=0.05,
+            margin_y=0.05,
             pic_w=6.4,
             pic_h=4.4,
             border=False,
@@ -285,7 +291,9 @@ def presets() -> dict[str, Layout]:
             row_heights=[3.82] * 5,
             origin_x=-0.025,
             origin_y=0.37,
-            size_mode=SIZE_FIXED,
+            size_mode=SIZE_MARGIN,
+            margin_x=0.075,
+            margin_y=0.42,
             pic_w=4.7,
             pic_h=2.98,
             border=False,
@@ -295,7 +303,9 @@ def presets() -> dict[str, Layout]:
             macro_name="Arrange1Selected",
             col_widths=[10.1],
             row_heights=[7.1],
-            size_mode=SIZE_FIXED,
+            size_mode=SIZE_MARGIN,
+            margin_x=0.1,
+            margin_y=0.1,
             pic_w=9.9,
             pic_h=6.9,
             border=False,

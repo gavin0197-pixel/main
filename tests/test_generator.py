@@ -209,8 +209,17 @@ def test_slot_lines_in_code():
 
 def _latest_with_2cm_text_col():
     lay = presets()["최신: 파일 선택 6장, 왼쪽 1.46cm 열 + 2×3"]
+    lay.size_mode = SIZE_FIXED  # v0.3.0 문제는 고정 크기 모드에서 발생
     lay.col_widths[0] = 2.0
     return lay
+
+
+def test_reenabled_narrow_cell_in_cell_size_mode_fits_naturally():
+    lay = presets()["최신: 파일 선택 6장, 왼쪽 1.46cm 열 + 2×3"]
+    lay.col_widths[0] = 2.0
+    lay.toggle_cell(2, 0)
+    s = next(s for s in lay.slots() if (s.row, s.col) == (2, 0))
+    assert (s.x, s.w, s.h) == (0.1, 1.8, 4.5) and not s.shrunk and not lay.warnings()
 
 
 def test_toggle_twice_restores_identical_slots():
@@ -252,3 +261,19 @@ def test_old_json_without_shrink_field_loads():
     d = P["최신: 파일 선택 6장, 왼쪽 1.46cm 열 + 2×3"].to_dict()
     d.pop("shrink_to_cell")
     assert Layout.from_dict(d).shrink_to_cell is True
+
+
+# ---------------- 사진 크기 기본값: 칸 크기 − 여백 ----------------
+
+def test_default_size_mode_is_cell_size():
+    assert Layout().size_mode == SIZE_MARGIN
+    for name, lay in presets().items():
+        assert lay.size_mode == SIZE_MARGIN, name
+
+
+def test_presets_same_result_in_cell_and_fixed_mode():
+    """프리셋을 '고정 크기'로 바꿔도 결과가 같아야 함 (여백과 고정 크기가 서로 맞게 설정됨)."""
+    for name, lay in presets().items():
+        fixed = Layout.from_dict({**lay.to_dict(), "size_mode": SIZE_FIXED})
+        flat = lambda v: [c for t in v for c in t]  # noqa: E731
+        assert flat(xy(lay)) == pytest.approx(flat(xy(fixed))), name
