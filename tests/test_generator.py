@@ -4,6 +4,7 @@ import re
 import pytest
 
 from ppt_macro_gen.model import (
+    ASPECT_FILL,
     ASPECT_FIT,
     ASPECT_STRETCH,
     FILL_COL,
@@ -158,9 +159,9 @@ def check_blocks(code: str) -> None:
 
 
 def all_combos():
-    for src, aspect, size, border, exact, sort, order, fill in itertools.product(
+    for src, (aspect, smart), size, border, exact, sort, order, fill in itertools.product(
         [SOURCE_FILE_DIALOG, SOURCE_SELECTED, SOURCE_FOLDER],
-        [ASPECT_STRETCH, ASPECT_FIT],
+        [(ASPECT_STRETCH, True), (ASPECT_FIT, True), (ASPECT_FILL, True), (ASPECT_FILL, False)],
         [SIZE_MARGIN, SIZE_FIXED],
         [True, False],
         [True, False],
@@ -168,7 +169,7 @@ def all_combos():
         [ORDER_POSITION, ORDER_SELECTION],
         [FILL_ROW, FILL_COL],
     ):
-        yield Layout(macro_name="TestMacro", source=src, aspect=aspect, size_mode=size, border=border,
+        yield Layout(macro_name="TestMacro", source=src, aspect=aspect, smart_crop=smart, size_mode=size, border=border,
                      exact_count=exact, sort=sort, selected_order=order, fill_order=fill)
 
 
@@ -180,9 +181,15 @@ def test_generated_vba_is_structurally_valid_for_all_options():
         # 사용하는 보조 함수는 반드시 정의되어 있어야 함
         for helper in set(re.findall(r"\b(\w+_TestMacro)\b", code)):
             assert re.search(rf"(Sub|Function) {helper}\(", code), helper
-        # 정의만 되고 안 쓰는 보조 함수도 없어야 함
+        # 정의만 되고 안 쓰는 보조 함수도 없어야 함 (자기 본문 밖에서 호출되는지)
         for helper in re.findall(r"Private (?:Sub|Function) (\w+)\(", code):
-            assert len(re.findall(rf"\b{helper}\b", code)) >= 3 or helper.startswith("Fit_"), helper
+            m = re.search(rf"Private (?:Sub|Function) {helper}\(.*?End (?:Sub|Function)", code, re.S)
+            outside = code[: m.start()] + code[m.end():]
+            assert re.search(rf"\b{helper}\b", outside), f"unused helper {helper}"
+        # 회전된(휴대폰) 사진 처리
+        assert "sideways = " in code
+        assert ("ObjBox_TestMacro" in code) == (lay.aspect == ASPECT_FILL and lay.smart_crop
+                                                and lay.source != SOURCE_SELECTED)
         assert "\n" not in code.replace("\r\n", "")  # CRLF 일관
         code.encode("cp949")  # .bas 저장 가능
 

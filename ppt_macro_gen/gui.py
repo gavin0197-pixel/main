@@ -8,6 +8,7 @@ from tkinter import colorchooser, filedialog, messagebox, ttk
 
 from . import APP_NAME, __version__
 from .model import (
+    ASPECT_FILL,
     ASPECT_FIT,
     ASPECT_STRETCH,
     FILL_COL,
@@ -72,6 +73,7 @@ class App(ttk.Frame):
         self.v_pic_h = V()
         self.v_aspect = V()
         self.v_shrink = tk.BooleanVar()
+        self.v_smart = tk.BooleanVar()
         self.v_border = tk.BooleanVar()
         self.v_border_w = V()
         self.v_border_color = V()
@@ -85,7 +87,7 @@ class App(ttk.Frame):
         self.v_status = V()
         for var in (
             self.v_name, self.v_origin_x, self.v_origin_y, self.v_fill, self.v_size_mode,
-            self.v_margin_x, self.v_margin_y, self.v_pic_w, self.v_pic_h, self.v_aspect, self.v_shrink,
+            self.v_margin_x, self.v_margin_y, self.v_pic_w, self.v_pic_h, self.v_aspect, self.v_shrink, self.v_smart,
             self.v_border, self.v_border_w, self.v_border_color, self.v_source, self.v_sort,
             self.v_sel_order, self.v_exact, self.v_exts, self.v_opt_explicit,
         ):
@@ -235,6 +237,13 @@ class App(ttk.Frame):
                         variable=self.v_aspect, value=ASPECT_STRETCH).pack(anchor="w")
         ttk.Radiobutton(f, text="유지 (박스 안에 들어가게 축소, 중앙 정렬)",
                         variable=self.v_aspect, value=ASPECT_FIT).pack(anchor="w")
+        ttk.Radiobutton(f, text="유지 + 잘라서 꽉 채우기 (넘치는 부분은 PPT 자르기)",
+                        variable=self.v_aspect, value=ASPECT_FILL).pack(anchor="w")
+        self.cb_smart = ttk.Checkbutton(
+            f, text="시료 자동 감지: 흰 배경과 다른 부분을 찾아 시료가 잘리지 않게 자르기\n"
+                    "(시료가 너무 크면 그 방향만 칸보다 좁게 / 선택 사진 모드는 가운데 기준)",
+            variable=self.v_smart)
+        self.cb_smart.pack(anchor="w", padx=(18, 0))
 
         f = self._section(tab, "테두리")
         ttk.Checkbutton(f, text="실선 테두리", variable=self.v_border).grid(row=0, column=0, sticky="w")
@@ -344,6 +353,7 @@ class App(ttk.Frame):
         self.v_pic_w.set(num(lay.pic_w))
         self.v_pic_h.set(num(lay.pic_h))
         self.v_shrink.set(lay.shrink_to_cell)
+        self.v_smart.set(lay.smart_crop)
         self.v_aspect.set(lay.aspect)
         self.v_border.set(lay.border)
         self.v_border_w.set(num(lay.border_weight))
@@ -376,6 +386,7 @@ class App(ttk.Frame):
         lay.pic_w = parse_cm(self.v_pic_w.get(), "사진 가로")
         lay.pic_h = parse_cm(self.v_pic_h.get(), "사진 세로")
         lay.shrink_to_cell = bool(self.v_shrink.get())
+        lay.smart_crop = bool(self.v_smart.get())
         lay.aspect = self.v_aspect.get()
         lay.border = bool(self.v_border.get())
         lay.border_weight = parse_cm(self.v_border_w.get(), "테두리 두께")
@@ -411,6 +422,8 @@ class App(ttk.Frame):
             rb.state(["!disabled"] if src == SOURCE_FILE_DIALOG else ["disabled"])
         for rb in self.rb_order:
             rb.state(["!disabled"] if src == SOURCE_SELECTED else ["disabled"])
+        smart_ok = self.v_aspect.get() == ASPECT_FILL and src != SOURCE_SELECTED
+        self.cb_smart.state(["!disabled"] if smart_ok else ["disabled"])
 
     def _show_status(self, errs: list[str], warns: list[str]) -> None:
         lay = self.layout

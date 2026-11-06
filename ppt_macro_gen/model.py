@@ -21,6 +21,7 @@ SIZE_FIXED = "fixed"  # 모든 사진 고정 크기, 칸 정중앙
 # 비율
 ASPECT_STRETCH = "stretch"  # 사진 박스에 강제로 맞춤 (원본 비율이 다르면 찌그러짐)
 ASPECT_FIT = "fit"  # 원본 비율 유지, 박스 안에 들어가도록 축소 후 중앙
+ASPECT_FILL = "fill"  # 원본 비율 유지, 박스를 꽉 채우고 넘치는 부분은 잘라냄 (PPT 자르기)
 
 # 사진 가져오기 방식
 SOURCE_FILE_DIALOG = "file_dialog"  # 파일 선택 창에서 다중 선택해 새로 삽입
@@ -79,6 +80,8 @@ class Layout:
     # 고정 크기 모드에서 사진이 칸보다 크면 칸 − 여백으로 줄임 (끄면 칸 밖으로 튀어나옴)
     shrink_to_cell: bool = True
     aspect: str = ASPECT_STRETCH
+    # 잘라서 채우기: 사진에서 시료(배경과 다른 부분)를 찾아 잘리지 않게 자를 위치를 정함
+    smart_crop: bool = True
     border: bool = True
     border_weight: float = 0.75  # pt
     border_color: str = "#000000"
@@ -261,6 +264,7 @@ def presets() -> dict[str, Layout]:
             size_mode=SIZE_FIXED,
             pic_w=6.5,
             pic_h=4.5,
+            aspect=ASPECT_FILL,
             source=SOURCE_FILE_DIALOG,
         ),
         "G: 선택 사진 6장 2×3 (6.4×4.4, 간격 0.1)": Layout(

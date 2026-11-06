@@ -6,5 +6,7 @@
   2. `CHANGELOG.md` 맨 위에 `## [버전] - 날짜` 섹션을 추가한다 (`tests/test_version.py`가 검사).
   3. 버전 표시는 `__version__`에서 자동으로 GUI 제목/상단, EXE 파일명·속성, VBA 머리 주석에 들어가므로 하드코딩하지 않는다.
 - 새 버전을 푸시하면 `.github/workflows/build-exe.yml`이 Windows EXE를 빌드하고 GitHub Release `v<버전>`을 만든다.
-- 테스트: `python -m pytest`. 생성 VBA는 실제 PowerPoint에서 검증되지 않았으므로 "테스트 완료"라고 말하지 않는다.
+- 시료 자동 감지/자르기 로직은 `ppt_macro_gen/smartcrop.py`(Python 기준 구현, 테스트용)와
+  `vba.py`의 `_emit_crop_window`/`_emit_objbox`(VBA)가 같은 로직이다. 한쪽을 고치면 다른 쪽도 고친다.
+- 테스트: `python -m pytest` (smartcrop 테스트는 pillow 필요). 생성 VBA는 실제 PowerPoint에서 검증되지 않았으므로 "테스트 완료"라고 말하지 않는다.
 - 사용자 요청 없이 사진 압축·크롭·비율 변경 등 동작을 바꾸지 않는다. 가로/세로, 간격/피치를 혼동하지 않는다.
