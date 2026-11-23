@@ -73,20 +73,31 @@ def test_detected_box_covers_sample(case, true_box):
     assert (px[3] - px[1]) < (true_box[3] - true_box[1]) + 120
 
 
-def test_center_crop_would_cut_tall_sample_but_smart_crop_does_not():
+def inside(window, W, H, eps=1e-6):
+    wx, wy, ww, wh = window
+    return wx >= -eps and wy >= -eps and wx + ww <= W + eps and wy + wh <= H + eps
+
+
+def cuts(window, box):
+    """시료가 창 밖으로 잘리는 양 (위, 아래)."""
+    wx, wy, ww, wh = window
+    return max(0.0, wy - box[1]), max(0.0, box[3] - (wy + wh))
+
+
+def test_tall_sample_same_size_as_cell_with_minimal_even_cut():
+    """세운(위아래로 긴) 시료: 크기는 칸과 동일(창이 사진 안, 칸 비율), 시료 가운데 기준으로 양 끝만 똑같이 조금 잘림."""
     img = synth_photo(**TALL)
     W, H = img.size
     plain = crop_window(W, H, None, RATIO)
-    assert not contains(plain, TRUE_TALL)  # 그냥 가운데 자르면 위쪽 브래킷이 잘림
     b = detect_box(*argb_of(img))
     smart = crop_window(W, H, (b[0] * W, b[1] * H, b[2] * W, b[3] * H), RATIO)
-    assert contains(smart, TRUE_TALL)
-    assert abs(smart[2] / smart[3] - RATIO) < 1e-9
-    # 실제 적용되는 자르기(사진 밖은 안 자름): 남는 영역이 시료 전체를 포함, 위아래만 조금 잘림
-    cl, ct, cr, cb = clamp_crop(W, H, smart)
-    assert (cl, cr) == (0, 0)
-    assert contains((cl, ct, W - cl - cr, H - ct - cb), TRUE_TALL)
-    assert ct > 0 and cb > 0
+    for win in (plain, smart):
+        assert inside(win, W, H) and win[2] / win[3] == pytest.approx(RATIO)
+        assert clamp_crop(W, H, win) == pytest.approx((win[0], win[1], W - win[0] - win[2], H - win[1] - win[3]))
+    top, bottom = cuts(smart, TRUE_TALL)
+    assert top == pytest.approx(bottom, abs=15)  # 양 끝 균등 (축소 분석 오차 ±1px)
+    p_top, p_bottom = cuts(plain, TRUE_TALL)
+    assert max(top, bottom) < max(p_top, p_bottom) * 0.5  # 가운데 기준보다 최대 잘림이 절반 이하
 
 
 def test_flat_sample_fills_cell_without_blank():
@@ -101,16 +112,19 @@ def test_flat_sample_fills_cell_without_blank():
 
 
 def test_window_math():
-    assert crop_window(1500, 2000, None, RATIO) == pytest.approx((0, 1000 - 1500 / RATIO / 2, 1500, 1500 / RATIO))
-    # 시료가 창보다 크면 사진 밖(음수 자르기 = 빈 공간)으로 넓힘, 양옆 균등
-    # (여유 4% = 세로 80px 포함 → 20~1980)
-    wx, wy, ww, wh = crop_window(1500, 2000, (100, 100, 1400, 1900), RATIO)
-    assert wh == pytest.approx(1960) and ww == pytest.approx(1960 * RATIO)
-    assert wx == pytest.approx((1500 - ww) / 2) and wy == pytest.approx(20)
-    # 여유까지는 안 들어가지만 시료는 들어가는 경우 → 빈 공간 없이 시료 기준
+    max_win = (0, 1000 - 1500 / RATIO / 2, 1500, 1500 / RATIO)
+    assert crop_window(1500, 2000, None, RATIO) == pytest.approx(max_win)
+    # 시료가 창보다 커도 창은 사진 안의 가장 큰 창 그대로, 시료 가운데(1000) 기준
+    assert crop_window(1500, 2000, (100, 100, 1400, 1900), RATIO) == pytest.approx(max_win)
+    wx, wy, ww, wh = crop_window(1500, 2000, (100, 300, 1400, 1700), RATIO)  # 시료 가운데 1000
+    assert (ww, wh) == pytest.approx((1500, 1500 / RATIO)) and wy + wh / 2 == pytest.approx(1000)
+    # 여유까지는 안 들어가지만 시료는 들어가는 경우 → 시료 기준
     wx, wy, ww, wh = crop_window(1500, 2000, (0, 500, 1500, 1520), RATIO)
     assert (ww, wh) == pytest.approx((1500, 1500 / RATIO)) and wx == 0
     assert wy <= 500 and wy + wh >= 1520
+    # 시료가 사진 끝에 붙어 있으면 창은 사진 안으로 밀림 (크기 유지)
+    wx, wy, ww, wh = crop_window(1500, 2000, (0, 0, 1500, 300), RATIO)
+    assert wy == 0 and wh == pytest.approx(1500 / RATIO)
     # 가로로 넓은 사진, 세로 칸
     wx, wy, ww, wh = crop_window(2000, 1500, None, 4.5 / 6.5)
     assert wh == 1500 and ww == pytest.approx(1500 * 4.5 / 6.5)
@@ -136,8 +150,11 @@ def test_phone_photo_stored_sideways(powerpoint_rotates_shape):
         ow, oh = DW, DH
         box = map_box(sb, False, 6)
         shown = crop_window(ow, oh, (box[0] * ow, box[1] * oh, box[2] * ow, box[3] * oh), RATIO)
-    assert contains(shown, TRUE_TALL)
+    # 화면에서도 칸 비율, 사진 안, 시료 가운데 기준으로 양 끝이 균등하게 조금만 잘림
     assert shown[2] / shown[3] == pytest.approx(RATIO)
+    assert inside(shown, DW, DH)
+    top, bottom = cuts(shown, TRUE_TALL)
+    assert top == pytest.approx(bottom, abs=15) and max(top, bottom) < 200
 
 
 def test_map_box_orientations():
@@ -151,3 +168,17 @@ def test_map_box_orientations():
 def test_blank_image_returns_none():
     img = Image.new("RGB", (300, 400), (240, 240, 240))
     assert detect_box(*argb_of(img)) is None
+
+
+def test_window_always_cell_ratio_inside_photo_random():
+    """어떤 사진/시료든 창은 칸 비율 + 사진 안 → 모든 사진이 칸과 똑같은 크기."""
+    rnd = random.Random(1)
+    for _ in range(500):
+        ow, oh = rnd.uniform(500, 4000), rnd.uniform(500, 4000)
+        ratio = rnd.uniform(0.3, 3)
+        x0, x1 = sorted(rnd.uniform(0, ow) for _ in range(2))
+        y0, y1 = sorted(rnd.uniform(0, oh) for _ in range(2))
+        box = None if rnd.random() < 0.2 else (x0, y0, x1, y1)
+        win = crop_window(ow, oh, box, ratio)
+        assert inside(win, ow, oh, eps=1e-6 * max(ow, oh))
+        assert win[2] / win[3] == pytest.approx(ratio)

@@ -241,7 +241,7 @@ class App(ttk.Frame):
                         variable=self.v_aspect, value=ASPECT_FILL).pack(anchor="w")
         self.cb_smart = ttk.Checkbutton(
             f, text="시료 자동 감지: 흰 배경과 다른 부분을 찾아 시료가 잘리지 않게 자르기\n"
-                    "(시료가 너무 크면 그 방향만 칸보다 좁게 / 선택 사진 모드는 가운데 기준)",
+                    "(크기는 항상 칸과 동일, 시료가 너무 크면 양 끝 최소한만 잘림 / 선택 사진 모드는 가운데 기준)",
             variable=self.v_smart)
         self.cb_smart.pack(anchor="w", padx=(18, 0))
 

@@ -74,9 +74,9 @@ def crop_window(ow: float, oh: float, box, ratio: float) -> tuple[float, float, 
     """사진(ow×oh) 안에서 가로/세로 비 ratio 인 잘라낼 창 (x, y, w, h).
 
     box = 시료 범위(틀 좌표, 여유 없음). 없으면 가운데 기준으로 자른다.
-      1) 사진 안의 가장 큰 창에 시료 + 여유(PAD)가 들어가면 → 그 주변으로
-      2) 여유까지는 안 되지만 시료는 들어가면 → 시료 기준으로 (빈 공간 없음)
-      3) 시료가 창보다 크면 → 시료 + 여유를 담는 최소 창. 사진 밖으로 나간 부분은 빈 공간
+    창은 항상 사진 안의 가장 큰 창(= 칸 비율) → 모든 사진이 칸과 같은 크기로 꽉 참.
+      1) 시료 + 여유(PAD)가 창에 들어가면 → 그 가운데로
+      2) 아니면 → 시료 가운데로. 시료가 창보다 크면 시료 양 끝이 똑같이 최소한만 잘림
     """
     if ow / oh > ratio:
         ww, wh = oh * ratio, oh
@@ -90,15 +90,8 @@ def crop_window(ow: float, oh: float, box, ratio: float) -> tuple[float, float, 
         px1, py1 = min(ow, bx1 + ow * PAD), min(oh, by1 + oh * PAD)
         if px1 - px0 <= ww and py1 - py0 <= wh:
             cx, cy = (px0 + px1) / 2, (py0 + py1) / 2
-        elif bx1 - bx0 <= ww and by1 - by0 <= wh:
-            cx, cy = (bx0 + bx1) / 2, (by0 + by1) / 2
         else:
-            bw, bh = px1 - px0, py1 - py0
-            if bw / bh > ratio:
-                ww, wh = bw, bw / ratio
-            else:
-                ww, wh = bh * ratio, bh
-            cx, cy = (px0 + px1) / 2, (py0 + py1) / 2
+            cx, cy = (bx0 + bx1) / 2, (by0 + by1) / 2
     wx = _place(cx, ww, ow)
     wy = _place(cy, wh, oh)
     return wx, wy, ww, wh
@@ -111,7 +104,7 @@ def _place(center: float, size: float, total: float) -> float:
 
 
 def clamp_crop(ow: float, oh: float, window) -> tuple[float, float, float, float]:
-    """창을 실제 자르기 값(왼, 위, 오른, 아래 ≥ 0)으로. 사진 밖으로 나간 부분은 자르지 않는다
-    (그 축은 칸보다 좁게 들어가고, 시료는 잘리지 않음). 음수 자르기에 의존하지 않기 위함."""
+    """창을 실제 자르기 값(왼, 위, 오른, 아래 ≥ 0)으로. crop_window 의 창은 항상 사진 안이므로
+    보통 그대로이며, 0 미만 보정은 음수 자르기를 쓰지 않기 위한 안전장치."""
     wx, wy, ww, wh = window
     return max(0.0, wx), max(0.0, wy), max(0.0, ow - wx - ww), max(0.0, oh - wy - wh)
